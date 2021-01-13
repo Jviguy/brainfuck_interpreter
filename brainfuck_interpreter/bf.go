@@ -1,4 +1,4 @@
-package brainfuck_interperter
+package brainfuck_interpreter
 
 import (
 	"go.uber.org/atomic"

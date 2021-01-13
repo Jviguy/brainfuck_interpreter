@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/jviguy/brainfuck_interperter/brainfuck_interperter"
+	"github.com/jviguy/brainfuck_interpreter/brainfuck_interpreter"
 	"go.uber.org/atomic"
 	"io/ioutil"
 	"log"
@@ -28,7 +28,7 @@ func main() {
 		ptr.Store(uint16(0))
 		//The said memory the interep will use.
 		memory := make(map[uint16]uint8)
-		b := &brainfuck_interperter.CustomFucker{Memory: memory, Ptr: ptr, Wg: sync.WaitGroup{}, Stdout: os.Stdout, Stdin: os.Stdin}
+		b := &brainfuck_interpreter.CustomFucker{Memory: memory, Ptr: ptr, Wg: sync.WaitGroup{}, Stdout: os.Stdout, Stdin: os.Stdin}
 		b.Run(code)
 	} else {
 		bytes, err := ioutil.ReadFile(os.Args[1])
@@ -41,7 +41,7 @@ func main() {
 		ptr.Store(uint16(0))
 		//The said memory the interep will use.
 		memory := make(map[uint16]uint8)
-		b := &brainfuck_interperter.BrainFucker{Memory: memory, Ptr: ptr, Stdout: os.Stdout, Stdin: os.Stdin}
+		b := &brainfuck_interpreter.BrainFucker{Memory: memory, Ptr: ptr, Stdout: os.Stdout, Stdin: os.Stdin}
 		b.Run(code)
 	}
 }
