@@ -1,7 +1,7 @@
 package brainfuck_interperter
 
 import (
-	"fmt"
+	"go.uber.org/atomic"
 	"log"
 	"os"
 	"sync"
@@ -9,7 +9,9 @@ import (
 
 //A struct used for running basic brainfuck code.
 type BrainFucker struct {
-	Ptr    uint16
+	Ptr    atomic.Value
+	Stdout *os.File
+	Stdin  *os.File
 	Memory map[uint16]uint8
 }
 
@@ -19,30 +21,33 @@ func (b BrainFucker) Run(code string) {
 		switch currentChar {
 		case '>':
 			//> Increments pointer addr
-			b.Ptr++
+			b.Ptr.Store(b.Ptr.Load().(uint16) + 1)
 		case '<':
 			//< Decreases Pointer Addr
-			b.Ptr--
+			b.Ptr.Store(b.Ptr.Load().(uint16) - 1)
 		case '+':
 			//+ Increments the byte value at the said pointer
-			b.Memory[b.Ptr]++
+			b.Memory[b.Ptr.Load().(uint16)]++
 		case '-':
 			//- Decreases the byte value at the said pointer
-			b.Memory[b.Ptr]--
+			b.Memory[b.Ptr.Load().(uint16)]--
 		case '.':
 			//. Prints the current byte as a character to the os.Stdout
-			fmt.Print(string(b.Memory[b.Ptr]))
-		case ',':
-			//reads one byte from the stdin and assigns it to our byte value
-			by := make([]byte, 1)
-			_, err := os.Stdin.Read(by)
+			_, err := b.Stdout.WriteString(string(b.Memory[b.Ptr.Load().(uint16)]))
 			if err != nil {
 				log.Fatal(err)
 			}
-			b.Memory[b.Ptr] = by[0]
+		case ',':
+			//reads one byte from the stdin and assigns it to our byte value
+			by := make([]byte, 1)
+			_, err := b.Stdin.Read(by)
+			if err != nil {
+				log.Fatal(err)
+			}
+			b.Memory[b.Ptr.Load().(uint16)] = by[0]
 		case '[':
 			//[ if the value is zero we move to the next instruction after the matching ]
-			if b.Memory[b.Ptr] == 0 {
+			if b.Memory[b.Ptr.Load().(uint16)] == 0 {
 				var loop = 1
 				for loop > 0 {
 					i--
@@ -56,7 +61,7 @@ func (b BrainFucker) Run(code string) {
 			}
 		case ']':
 			//] if the value is non zero we move to the matching [
-			if b.Memory[b.Ptr] != 0 {
+			if b.Memory[b.Ptr.Load().(uint16)] != 0 {
 				var loop = 1
 				for loop > 0 {
 					i--
@@ -76,45 +81,51 @@ func (b BrainFucker) Run(code string) {
 
 //A struct to run my custom brainfuck dialect.
 type CustomFucker struct {
-	Ptr    uint16
+	Ptr    atomic.Value
+	Stdout *os.File
+	Stdin  *os.File
 	Memory map[uint16]uint8
 	Wg     sync.WaitGroup
 }
 
 func (b *CustomFucker) Run(code string) {
-	for i := 0; i < len(code); i++ {
-		currentChar := code[i]
+	var i atomic.Value
+	for i.Store(0); i.Load().(int) < len(code); i.Store(i.Load().(int) + 1) {
+		currentChar := code[i.Load().(int)]
 		switch currentChar {
 		case '>':
 			//> Increments pointer addr
-			b.Ptr++
+			b.Ptr.Store(b.Ptr.Load().(uint16) + 1)
 		case '<':
 			//< Decreases Pointer Addr
-			b.Ptr--
+			b.Ptr.Store(b.Ptr.Load().(uint16) - 1)
 		case '+':
 			//+ Increments the byte value at the said pointer
-			b.Memory[b.Ptr]++
+			b.Memory[b.Ptr.Load().(uint16)]++
 		case '-':
 			//- Decreases the byte value at the said pointer
-			b.Memory[b.Ptr]--
+			b.Memory[b.Ptr.Load().(uint16)]--
 		case '.':
 			//. Prints the current byte as a character to the os.Stdout
-			fmt.Print(string(b.Memory[b.Ptr]))
-		case ',':
-			//reads one byte from the stdin and assigns it to our byte value
-			by := make([]byte, 1)
-			_, err := os.Stdin.Read(by)
+			_, err := b.Stdout.WriteString(string(b.Memory[b.Ptr.Load().(uint16)]))
 			if err != nil {
 				log.Fatal(err)
 			}
-			b.Memory[b.Ptr] = by[0]
+		case ',':
+			//reads one byte from the stdin and assigns it to our byte value
+			by := make([]byte, 1)
+			_, err := b.Stdin.Read(by)
+			if err != nil {
+				log.Fatal(err)
+			}
+			b.Memory[b.Ptr.Load().(uint16)] = by[0]
 		case '[':
 			//[ if the value is zero we move to the next instruction after the matching ]
-			if b.Memory[b.Ptr] == 0 {
+			if b.Memory[b.Ptr.Load().(uint16)] == 0 {
 				var loop = 1
 				for loop > 0 {
-					i--
-					var currentChar = code[i]
+					i.Store(i.Load().(int) - 1)
+					var currentChar = code[i.Load().(int)]
 					if currentChar == ']' {
 						loop--
 					} else if currentChar == '[' {
@@ -124,11 +135,11 @@ func (b *CustomFucker) Run(code string) {
 			}
 		case ']':
 			//] if the value is non zero we move to the matching [
-			if b.Memory[b.Ptr] != 0 {
+			if b.Memory[b.Ptr.Load().(uint16)] != 0 {
 				var loop = 1
 				for loop > 0 {
-					i--
-					var currentChar = code[i]
+					i.Store(i.Load().(int) - 1)
+					var currentChar = code[i.Load().(int)]
 					if currentChar == '[' {
 						loop--
 					} else if currentChar == ']' {
@@ -137,28 +148,28 @@ func (b *CustomFucker) Run(code string) {
 				}
 			}
 		case '{':
-			var start = i + 1
+			var start = i.Load().(int) + 1
 			//} starts the matching code in an another thread
 			for {
-				if i == len(code) {
+				if i.Load().(int) == len(code) {
 					log.Fatalf("Unmatched [ found at char:%v", start-1)
 				}
-				currentChar = code[i]
+				currentChar = code[i.Load().(int)]
 				if currentChar == '}' {
 					break
 				}
-				i++
+				i.Store(i.Load().(int) + 1)
 			}
 			go func() {
 				b.Wg.Add(1)
-				b.Run(code[start : i-1])
+				b.Run(code[start : i.Load().(int)-1])
 				b.Wg.Done()
 			}()
 		case '@':
 			//@ awaits for all other threads to exit before continuing the program.
 			b.Wg.Wait()
 		default:
-			log.Fatalf("Invalid Operator %v located at: char:%v", string(code[i]), i)
+			log.Fatalf("Invalid Operator %v located at: char:%v", string(code[i.Load().(int)]), i.Load().(int))
 		}
 	}
 }
