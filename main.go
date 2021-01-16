@@ -3,10 +3,10 @@ package main
 import (
 	"github.com/jviguy/brainfuck_interpreter/brainfuck_interpreter"
 	"go.uber.org/atomic"
-	"io/ioutil"
 	"log"
 	"os"
 	"sync"
+	"io/ioutil"
 )
 
 func main() {
