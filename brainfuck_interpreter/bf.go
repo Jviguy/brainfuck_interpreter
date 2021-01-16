@@ -50,7 +50,11 @@ func (b BrainFucker) Run(code string) {
 			if b.Memory[b.Ptr.Load().(uint16)] == 0 {
 				var loop = 1
 				for loop > 0 {
-					i--
+					if i != 0 {
+						i--
+					} else {
+						i++
+					}
 					var currentChar = code[i]
 					if currentChar == ']' {
 						loop--
@@ -124,7 +128,11 @@ func (b *CustomFucker) Run(code string) {
 			if b.Memory[b.Ptr.Load().(uint16)] == 0 {
 				var loop = 1
 				for loop > 0 {
-					i.Store(i.Load().(int) - 1)
+					if i.Load().(int) != 0 {
+						i.Store(i.Load().(int) - 1)
+					} else {
+						i.Store(i.Load().(int) + 1)
+					}
 					var currentChar = code[i.Load().(int)]
 					if currentChar == ']' {
 						loop--
@@ -168,6 +176,9 @@ func (b *CustomFucker) Run(code string) {
 		case '@':
 			//@ awaits for all other threads to exit before continuing the program.
 			b.Wg.Wait()
+		case '!':
+			//! sets the current byte + 32 or flips the casing so 'a' to 'A'
+			b.Memory[b.Ptr.Load().(uint16)] ^= 0x20
 		default:
 			log.Fatalf("Invalid Operator %v located at: char:%v", string(code[i.Load().(int)]), i.Load().(int))
 		}
